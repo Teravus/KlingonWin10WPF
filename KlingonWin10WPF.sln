@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31129.286
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KlingonWin10WPF", "KlingonWin10WPF\KlingonWin10WPF.csproj", "{80AF3E4B-3F9A-428C-B442-C237996BCA83}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Debug|x64.ActiveCfg = Debug|x64
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Debug|x64.Build.0 = Debug|x64
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Debug|x86.ActiveCfg = Debug|x86
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Debug|x86.Build.0 = Debug|x86
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Release|x64.ActiveCfg = Release|x64
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Release|x64.Build.0 = Release|x64
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Release|x86.ActiveCfg = Release|x86
+		{80AF3E4B-3F9A-428C-B442-C237996BCA83}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {677F2BB0-75D5-4F3E-8B07-2639E40FDE1C}
+	EndGlobalSection
+EndGlobal
