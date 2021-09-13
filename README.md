@@ -66,7 +66,7 @@ Just like the original game, it doesn't give you much information about how to p
 
 ## Debugging The Game
 
-There is a debug overlay that you can load by pressing the Accent/Tilde button(`) on a US keyboard which gives you information about what hotspots are available and where your last click was in a mini square in the top left of the video and allows you to easily navigate around the game easily.
+There is a debug overlay that you can load by pressing the Accent/Tilde button(`) on a US keyboard which gives you information about what hotspots are available and where your last click was in a mini square in the top left of the video and allows you to navigate around the game easily.
 With the debug overlay open, and the video the last thing that you clicked on, 
 Press 'C' to jump to the next challenge.
 Press 'M' to jump 15 seconds forward in the video.
@@ -75,7 +75,7 @@ Press 'N' to jump 15 seconds back in the video.
 ## Legal Notice
 
 The original game:  Star Trek:(TM) Klingon(tm) is published by Simon & Schuster Interactive, 
-a devision of Simon & Schuster, 
+a division of Simon & Schuster, 
 in the publishing operation of Viacom Inc. 
 1230 Avenue of the Americas, New York, NY 10020
 
@@ -91,7 +91,7 @@ Windows is a trademark and Microsoft is a registered trademark of Microsoft Corp
 
 ---
 
-The remake of the FMV engine is completely from scratch and makes no use of the game assets or content.  Simon & Schuster never released code for the original edition. 
+The remake of the FMV engine is completely from scratch and includes none of the game assets or content.  Simon & Schuster never released code for the original edition. 
 
 ---
 
