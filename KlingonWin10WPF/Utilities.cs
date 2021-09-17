@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -120,6 +121,37 @@ namespace KlingonWin10WPF
 
 
             return GoodYN;
+        }
+
+        internal static string CheckForOriginalMedia()
+        {
+            string result = string.Empty;
+            List<string> FileLocations = new List<string>()
+            {
+                string.Format("MAIN_{0}X.AVI", 1),
+                string.Format("MAIN_{0}X.AVI", 2),
+                string.Format("SS_{0}X.AVI", 1),
+                string.Format("SS_{0}X.AVI", 2),
+                string.Format("COMPUTER.AVI"),
+                string.Format("HOLODECK.AVI"),
+                string.Format("IP_1.AVI")
+            };
+            for (int i = 0; i < FileLocations.Count; i++)
+            {
+                if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "CDAssets", FileLocations[i])))
+                {
+                    //if (result.Length == 0)
+                    //    result += "\r\n";
+
+                    result += "\t* " + FileLocations[i] + "\r\n";
+                }
+            }
+
+            if (result.Length > 0)
+            {
+                result = string.Format("The original game media wasn't found.\r\nWe are missing:\r\n{0}\r\nPlease check the github readme for how to prepare the original game media. https://github.com/Teravus/KlingonWin10WPF", result);
+            }
+            return result;
         }
     }
 }

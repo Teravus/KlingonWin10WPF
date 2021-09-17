@@ -19,29 +19,70 @@ namespace KlingonWin10WPF
     {
         public delegate void UserActionRequired();
         public delegate void InfoAction(long framestart, long frameend);
+
+        /// <summary>
+        /// We need the user to do something!
+        /// </summary>
         public event UserActionRequired ActionOn;
+
+        /// <summary>
+        /// We no longer need the user to do something!
+        /// </summary>
         public event UserActionRequired ActionOff;
+
+        /// <summary>
+        /// The game progress expects the game to quit.    Handle it!
+        /// </summary>
         public event UserActionRequired QuitGame;
+
+        /// <summary>
+        /// The user wants information about something.  Play the info in the supporting player!
+        /// </summary>
         public event InfoAction InfoVideoTrigger;
 
+        // Reference to the video player in the UI
         private VideoView _displayElement = null;
-        private SceneDefinition _currentScene { get; set; }
-        private List<SceneDefinition> _allSceneOptions { get; set; }
-        private SceneDefinition _lastScene { get; set; }
-        private long _challengeStartMS = 0;
-        private long _challengeEndMS = 0;
-        private long _lastPlayheadMS = 0;
-        private long _retryMS = 0;
-        private int timerMS = 50;
-        private bool _challengeSectionNotificationComplete = false;
-        private bool _visualizationEnabled = false;
-        private int _inactionacount = 0;
 
+        // Hey!  This is where we are at!
+        private SceneDefinition _currentScene { get; set; }
+
+        // This is every scene that is playable by the main player.  This contains scenes in Main_1.avi and SS_1.avi and Main_2.avi and SS_2.avi
+        private List<SceneDefinition> _allSceneOptions { get; set; }
+
+        // The last scene that played.  Some special cases rely on knowing what video we played last.
+        private SceneDefinition _lastScene { get; set; }
+
+        // When, in milliseconds, the user is expected to do something.
+        private long _challengeStartMS = 0;
+
+        // When, in milliseconds, the user took too long.
+        private long _challengeEndMS = 0;
+
+        // So we don't repeatedly ask for the play head position, only get it once per poll (50 ms) and store it here.
+        private long _lastPlayheadMS = 0;
+
+        //private long _retryMS = 0;
+
+        // Main player polling frequency for the video position.
+        private int timerMS = 50;
+
+        // set to true when we have completed sending an event to the UI to tell it to show the mouse cursor
+        // We don't want to do it twice.
+        private bool _challengeSectionNotificationComplete = false;
+    
+        private bool _visualizationEnabled = false;
+        
+        // internal game progress counters
+        private int _inactionacount = 0;
         private int _bombattemptcount = 1;
+
+
         private LibVLC _vlcInstance = null;
+        
         private int _multi_click_count = 0;
         private HotspotDefinition _multi_click_lastAction = null;
         private int _multi_click_Item_Sequence_id = -2;
+
         private MultiAction _special_case_multi_action = null;
         private SupportingPlayer _supportingPlayer = null;
         private string _ReplayingFromTimeStopVideo = null;  // We can't play these unless it is a main video, but we need to be able to control the fact that they should be played when playing an alternate.
@@ -49,10 +90,18 @@ namespace KlingonWin10WPF
         private string _loadedVideoFile = string.Empty;
         private float hotspotscale = 1.2f;
 
+        /// <summary>
+        /// The scene file has this special frame to trigger quitting the game.
+        /// </summary>
+        private const int GAME_END_FRAME_ID = 999999;
+
+        // This resizes the visualization for the hotspots.   It's funky.  Don't mess with it.
         public float HotspotScale 
         {
             get { return hotspotscale; } 
             set { hotspotscale = value;
+                if (_currentScene == null)
+                    return;
                 foreach (var item in _currentScene.PlayingHotspots)
                     item.HotspotScale = value;
 
@@ -61,10 +110,13 @@ namespace KlingonWin10WPF
             }
         }
 
-        private long originalVideoAudioDelayMicroseconds = -10000000;
-        private NAudioBufferer _duckBufferer;
-
+        // In the WPF app, This has to be assigned so we place the hotspot visualize boxes inside this grid.   In the UWP app, We just call VideoView.Parent so it isn't needed.
         internal Grid innerGrid { get; set; }
+
+        // When the supporting player is available (it isn't immediately available).   Assign it here.
+        // We need this to be able to hook to the support player events and...
+        // tell the supporting player to play info scenes on the paused hotspots.
+
         public SupportingPlayer TheSupportingPlayer
         {
             set
@@ -102,7 +154,14 @@ namespace KlingonWin10WPF
         List<SceneDefinition> DoNothingVideos = new List<SceneDefinition>();
 
         // I'm using the DispatcherTimer so that it is always on the main thread and we can interact with the unmanaged library.
-        private DispatcherTimer _PlayHeadTimer = new DispatcherTimer();
+        private DispatcherTimer _PlayHeadTimer = new DispatcherTimer(); // Timer that gets the current position of the play head in Milliseconds from video start and acts on that information.
+                                                                        // Triggers TimerTickAction()
+
+        /// <summary>
+        /// Create a new main scene player.  This should only be called once.  And..  Should contain a reference to the main video player on the form.
+        /// </summary>
+        /// <param name="displayElement">Main video player on the form</param>
+        /// <param name="allScenes">A list of SceneDefinitions from the Scene loader for the main video.</param>
         public ScenePlayer(VideoView displayElement, List<SceneDefinition> allScenes)
         {
             _displayElement = displayElement;
@@ -119,7 +178,10 @@ namespace KlingonWin10WPF
 
             };
         }
-
+        /// <summary>
+        /// Loads a save.
+        /// </summary>
+        /// <param name="def">SaveDefinition objects that are created by the Save loader from the user's Save file</param>
         public void LoadSave(SaveDefinition def)
         {
             string scene = def.SaveScene;
@@ -132,6 +194,10 @@ namespace KlingonWin10WPF
                 PlayScene(loadscene, framems);
             }
         }
+
+        /// <summary>
+        /// When debugging, sometimes it is a time saver to jump to the next challenge.  This does that.
+        /// </summary>
         public void JumpToChallenge()
         {
             if (_displayElement.MediaPlayer.IsPlaying)
@@ -146,8 +212,8 @@ namespace KlingonWin10WPF
         /// <summary>
         /// Play a scene.  Start from the beginning of the scene or optionally have a time
         /// </summary>
-        /// <param name="def"></param>
-        /// <param name="specifictimecode"></param>
+        /// <param name="def">The SceneDefinition object you would like to play!</param>
+        /// <param name="specifictimecode">In some special cases, you want to start from a specific point in the scene..  like when loading a game.  This is in Milliseconds from start of video.</param>
         public void PlayScene(SceneDefinition def, long specifictimecode = 0, string ReplayingFromTimeStop = null)
         {
             bool _visualizations = _visualizationEnabled;
@@ -229,7 +295,7 @@ namespace KlingonWin10WPF
 
             _challengeStartMS = def.EndMS;
             _challengeEndMS = def.SuccessMS - timerMS;
-            _retryMS = def.retryMS;
+            //_retryMS = def.retryMS;
 
             _displayElement.MediaPlayer.Time = def.StartMS;
             Task.Delay(50).Wait();
@@ -284,7 +350,9 @@ namespace KlingonWin10WPF
 
 
         }
-
+        /// <summary>
+        /// Decreases the volume of the player by 15 out of 100;
+        /// </summary>
         public void LowerVolume()
         {
             var vol = _displayElement.MediaPlayer.Volume;
@@ -295,7 +363,9 @@ namespace KlingonWin10WPF
             }
             _displayElement.MediaPlayer.Volume = vol;
         }
-
+        /// <summary>
+        /// Increases the volume of the player by 15 out of 100;
+        /// </summary>
         public void IncreaseVolume()
         {
             var vol = _displayElement.MediaPlayer.Volume;
@@ -307,6 +377,9 @@ namespace KlingonWin10WPF
             _displayElement.MediaPlayer.Volume = vol;
         }
 
+        /// <summary>
+        /// The name of the currently playing Scene!
+        /// </summary>
         public string ScenePlaying
         {
             get
@@ -317,7 +390,12 @@ namespace KlingonWin10WPF
             }
         }
 
-        public void MouseClick(int X, int Y, bool PausedState)
+        /// <summary>
+        /// Someone clicked the video!   So..   search through hotspots for clickables!
+        /// </summary>
+        /// <param name="X">Left position of Mouse in Original Video size coordinates.  You must Scale prior to calling this!</param>
+        /// <param name="Y">Top position of Mouse in Original Video size coordinates.  You must Scale Prior to calling this!</param>
+        public void MouseClick(int X, int Y)
         {
             if (_currentScene == null)
                 return;
@@ -563,6 +641,11 @@ namespace KlingonWin10WPF
             }
 
         }
+        /// <summary>
+        /// In Multi-click buttons..   they expect you to click multiple buttons in a very short timeframe.  
+        /// This just gives you extra time when you click the button...  to click the next button.
+        /// </summary>
+        /// <param name="ms"></param>
         private void RollBackFrameWithinChallenge(int ms)
         {
             var currtime = _displayElement.MediaPlayer.Time;
@@ -577,6 +660,18 @@ namespace KlingonWin10WPF
             else
                 _displayElement.MediaPlayer.Time = startChallenge;
         }
+
+        /// <summary>
+        /// When you are playing and the game demands that you something.  
+        /// Most times, if you don't pick something, the game will penalize you.
+        /// If the scene allows, go on to the next main scene(rare).
+        /// If there's no special case, play the generic Inaction video with Gowron getting increasingly frustrated with you.
+        /// If you get generic inaction 3 times..  You die!   Start Over.   Klingon Methods.
+        /// Special case for Multi-Click buttons.   If you click the first button..   then don't trigger an inaction video because..  
+        ///     technically you did something..  but because of the way the game uses the video position to figure out what to do..  
+        ///     you can still end up here on multi-click buttons
+        /// Special case for Bomb Blast.  In bomb blast scene, If you do nothing Gowron is very angry.  Show that video instead of the generic inaction.
+        /// </summary>
         private void TriggerInaction()
         {
             // Multi-action
@@ -662,6 +757,11 @@ namespace KlingonWin10WPF
             }
         }
 
+        /// <summary>
+        /// Get the information about where the user currently is in the game.
+        /// Use this to write this information to the save.
+        /// </summary>
+        /// <returns>The user game state</returns>
         internal SaveDefinition GetSaveInfo()
         {
 
@@ -686,11 +786,10 @@ namespace KlingonWin10WPF
             return result;
         }
 
-        private void PlayAlternate(SceneDefinition alternate, SceneDefinition RetryScene)
-        {
-            PlayScene(alternate);
-        }
-
+        /// <summary>
+        /// Add squares around the clickable hotspots
+        /// </summary>
+        /// <param name="ParentGrid"></param>
         public void VisualizeHotspots(Grid ParentGrid)
         {
             if (_visualizationEnabled)
@@ -705,6 +804,10 @@ namespace KlingonWin10WPF
             _visualizationEnabled = true;
         }
 
+
+        /// <summary>
+        /// Remove the squares that represent the hotspot positions.
+        /// </summary>
         public void VisualizeRemoveHotspots()
         {
             if (!_visualizationEnabled)
@@ -720,7 +823,10 @@ namespace KlingonWin10WPF
 
 
         }
-
+        /// <summary>
+        /// When you click on a hotspot when the game is paused and in Holodeck mode..   It is  supposed to give you information about the thing you clicked.
+        /// </summary>
+        /// <param name="scenename">The name of the scene to play in the supporting player</param>
         private void TriggerInfoScene(string scenename)
         {
             var infoscene = _allSceneOptions.Where(xy => xy.Name.ToLowerInvariant() == scenename.ToLowerInvariant()).FirstOrDefault();
@@ -799,23 +905,28 @@ namespace KlingonWin10WPF
 
                     break;
                 case SceneType.Bad:
-                    if (_currentScene.retryMS == Utilities.Frames15fpsToMS(999999))
-                    {
-                        UserActionRequired userAction = QuitGame;
-                        if (userAction != null)
-                        {
-                            userAction();
-                        }
-                        // This is a quit game
-                    }
+                    
+                    
 
-                    bool shouldShortenEnd = false;
-                    shouldShortenEnd = _currentScene.Name == "V018A" && _bombattemptcount <= 2;
-                    // special case for bomb blast
+                    bool BombBlastCase_ShortEnd = _currentScene.Name == "V018A" && _bombattemptcount <= 2;
+                    // special case for bomb blast.  If we're not on the third strike..   there are more tries so don't play Gowron's "We're all dead scene".
 
-                    if ((_lastPlayheadMS >= _currentScene.EndMS && _lastScene != null) || (shouldShortenEnd && _lastPlayheadMS >= (_currentScene.EndMS - 17000) && _lastScene != null))
+                    if ((_lastPlayheadMS >= _currentScene.EndMS && _lastScene != null) || (BombBlastCase_ShortEnd && _lastPlayheadMS >= (_currentScene.EndMS - 17000) && _lastScene != null))
                     {
+
                         _PlayHeadTimer.Stop(); // Stop the timer so we don't get ReplayingFromTimeStop Twice.
+                        
+                        if (_currentScene.retryMS == Utilities.Frames15fpsToMS(GAME_END_FRAME_ID))
+                        {
+                            // Trigger even to quit game.
+                            UserActionRequired userAction = QuitGame;
+                            if (userAction != null)
+                            {
+                                userAction();
+                            }
+                            // This is a quit game
+                        }
+
                         long retryms = _lastScene.retryMS;
                         if (retryms <= 0)
                         // Special case.  0 is used to determine that nothing bad should happen if you do nothing. 
@@ -871,6 +982,12 @@ namespace KlingonWin10WPF
                     item.Draw(ParentGrid, _displayElement.MediaPlayer.Time, _currentScene);
             }
         }
+        /// <summary>
+        /// Called by the PrepVideo Function in The UI.  Loads and starts the first Main video.
+        /// </summary>
+        /// <param name="_libVLCMain">Reference to the Unmanaged LibVLC</param>
+        /// <param name="CD">Usually not provided.  Which CD to load.</param>
+        /// <returns></returns>
         public LoadedVideoInfo Load_Main_Video(LibVLC _libVLCMain, int CD = 1)
         {
             _vlcInstance = _libVLCMain;
@@ -919,6 +1036,13 @@ namespace KlingonWin10WPF
 
             return result;
         }
+
+        /// <summary>
+        /// Switch the video file to the file containing this type of scene
+        /// </summary>
+        /// <param name="type">Enum for Main, Bad or Inaction.</param>
+        /// <param name="CD">This game has two CDS.  The Scene Definition knows which CD the scene is on.   
+        /// Either CD1 or CD2</param>
         private void SwitchVideo(SceneType type, int CD)
         {
             string filename = string.Empty;
@@ -952,6 +1076,11 @@ namespace KlingonWin10WPF
             }
 
         }
+
+        /// <summary>
+        /// Load a new video.
+        /// </summary>
+        /// <param name="path">The media file to load</param>
         private void SwitchVideo(string path)
         {
             using (var media = new Media(_vlcInstance, path, FromType.FromPath))
@@ -978,25 +1107,47 @@ namespace KlingonWin10WPF
             }
         }
 
+        /// <summary>
+        /// In order to know that the video is loaded, we wait for LibVLC to tell us that the media is playing.
+        /// </summary>
         private void WaitWhileLoading()
         {
             int whilelooptimeout = 0;
             while (!_displayElement.MediaPlayer.IsPlaying)
             {
                 Task.Delay(50).Wait();
-                if (++whilelooptimeout > 10)
+                if (++whilelooptimeout > 300)
                 {
-                    throw new Exception("The Player cannot be initialized");
+                    throw new Exception(string.Format("The Video or Video Player cannot be initialized loading file {0}", _loadedVideoFile));
                 }
             }
         }
 
     }
+
+    /// <summary>
+    /// Information about the loaded video
+    /// </summary>
     public class LoadedVideoInfo
     {
+        /// <summary>
+        /// The video was loaded or not
+        /// </summary>
         public bool Loaded { get; set; }
+
+        /// <summary>
+        /// Length of video in Milliseconds
+        /// </summary>
         public long MaxVideoMS { get; set; }
+
+        /// <summary>
+        /// Video Track Height
+        /// </summary>
         public int OriginalMainVideoHeight { get; set; }
+
+        /// <summary>
+        /// The video Track Width
+        /// </summary>
         public int OriginalMainVideoWidth { get; set; }
     }
 }

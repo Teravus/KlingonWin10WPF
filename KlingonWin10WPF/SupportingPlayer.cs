@@ -327,19 +327,21 @@ namespace KlingonWin10WPF
             using (var media = new Media(_libVLCInfo, path, FromType.FromPath))
             {
                 _displayElement.MediaPlayer.Play(media);
-                WaitWhileLoading();
+                WaitWhileLoading(path);
                 _displayElement.MediaPlayer.Pause();
             }
         }
 
-        private void WaitWhileLoading()
+        private void WaitWhileLoading(string filename)
         {
             int whilelooptimeout = 0;
             while (!_displayElement.MediaPlayer.IsPlaying)
             {
-                if (++whilelooptimeout > 800000)
+                Task.Delay(50).Wait();
+                if (++whilelooptimeout > 300)
                 {
-                    throw new Exception("The Player cannot be initialized");
+                    string ExceptionMessage = "The Video or Video Player cannot be initialized loading file {0}";
+                    throw new Exception(string.Format(ExceptionMessage, filename));
                 }
             }
         }

@@ -18,6 +18,7 @@ using LibVLCSharp.WPF;
 using LibVLCSharp.Shared;
 using System.Windows.Threading;
 using XamlAnimatedGif;
+using System.Runtime.InteropServices;
 
 namespace KlingonWin10WPF
 {
@@ -27,64 +28,113 @@ namespace KlingonWin10WPF
     public partial class MainPage : Window
     {
 
+        // Reference to the LibVLC Unmanaged Library
         private LibVLC _libVLCMain;
+
+        // In the UWP this is separate because each view area on the form is tied to a single LibVLC.   
+        // In WPF, this is just another name for the above single LibVLC.   
+        // If you don't have a second one in the UWP app, the screen gets overwritten by the supporting player and the game crashes!
         private LibVLC _libVLCInfo;
 
+        // The main video media player.   We keep it because we have to dispose it when closing.
         private LibVLCSharp.Shared.MediaPlayer _mediaPlayerMain;
 
+        // To distinguish between single clicks and double clicks, we record the place the user clicks and then..   we wait for the timer to fire.
+        // if the timer fires, we know they only clicked once.   If the timer fire, they double clickd!
         private Point _lastClickPoint = new Point(0d, 0d);
 
-
+        // Original video heights and widths..    When the main video loads, these get set.
         private static double _OriginalMainVideoHeight = 200d;
         private static double _OriginalMainVideoWidth = 320d;
 
+        // Aspect ratio.  Used for calculating the black bar offset when window doesn't match the aspect ratio.
         private double _OriginalAspectRatio = _OriginalMainVideoWidth / _OriginalMainVideoHeight;
 
+        // All Scenes
         private List<SceneDefinition> _scenes = new List<SceneDefinition>();
+
+        // Just Info scenes (ip000)
         private List<SceneDefinition> _infoScenes = new List<SceneDefinition>();
+
+        // Just Computer video Scenes (Replaying from time Stop Zero Zero.  Zero Zero.  Zero Zero.)
         private List<SceneDefinition> _computerScenes = new List<SceneDefinition>();
+
+        // Just the holodeck video scenes (Chirp, and hum)
         private List<SceneDefinition> _holodeckScenes = new List<SceneDefinition>();
 
+        // All the hotspots!
         private List<HotspotDefinition> _hotspots = new List<HotspotDefinition>();
+
+        // This is the visualization of the translated position that you clicked.
         private Rectangle _clickRectangle = null;
-        private long _maxVideoMS = 0;
+
+        // Soo..  when the title bar is visible, we have to offset things further
         private int _titlebarsize = 40;
+
+        // When the mouse is higher than this, show the title bar.
         private int _titlebarShowHeight = 20;
+
+        // This is the current size of the titlebar.
         private int _titlebarcurrentsize = 0;
+
+        // This is the tile bar pixels when it is hidden.  (spoiler: It still takes up some space)
         private int _titlebarinvisibleheight = 15;
+
+        // This is the timer that keeps track of if you single clicked.
         private readonly DispatcherTimer _clickTimer = new DispatcherTimer();
 
-
+        // If we successfully loaded the main video.
         private bool _MainVideoLoaded = false;
+
+        // Is the cursor visible?
         private bool _mcurVisible = false;
+
+        // Here is the main processor for the game.
         private ScenePlayer _mainScenePlayer = null;
+
+        // This plays sound only videos..   that support the main player.   The main player needs this.  It is precious.
         private SupportingPlayer _supportingPlayer = null;
+
+        // So..  if the game is expecting input from the user...  Don't allow them to pause the game.
         private bool _actionTime = false;
-        private const Key AccentTilde = (Key)223;
+        
+        // Delegate that defines what happens when the debug combobox with the main scenes is changed.
+        // We keep a reference here because we hook and unhook from this event.
         private SelectionChangedEventHandler lstSceneChanged = null;
 
+        // This is the holodeck cursor for when the game is paused.
         BitmapImage HolodeckCursor = null;  //new BitmapImage(new Uri(Path.Combine("Assets", "KlingonHolodeckCur.gif"), UriKind.Relative));
+
+        // This is the knife cursor when the game says User do something.
         BitmapImage dktahgCursor = null; // new BitmapImage(new Uri(Path.Combine("Assets", "dktahg.gif"), UriKind.Relative));
-        //Uri HolodeckCursor = new Uri(System.IO.Path.Combine("Assets", "KlingonHolodeckCur.gif"), UriKind.Relative);
-        //Uri dktahgCursor = new Uri(System.IO.Path.Combine("Assets", "dktahg.gif"), UriKind.Relative);
+
+        // We have two VideoViews on the form.   The loading order isn't guaranteed.   So..   we keep track of if we have initialized libVLC with this
         bool _coreVLCInitialized = false;
 
 
         public MainPage()
         {
             InitializeComponent();
-            this.KeyDown += (ob, ea) =>
+           
+            this.KeyUp += (ob, ea) =>
             {
                 Keyup(ob, ea);
 
             };
            
             _clickTimer.Interval = TimeSpan.FromSeconds(0.2); //wait for the other click for 200ms
+
+            // Hey this fired!   That means a user single clickdd!
             _clickTimer.Tick += (o1, em) =>
             {
                 lock (_clickTimer)
                     _clickTimer.Stop();
                 // Fire Single Click.
+                
+                // We have to figure out the aspect ratio of the window...  and figure out how much
+                // larger than the ideal length for the aspect ratio the window is..  in order to deal with black bars.
+                // Another way to put it:  If the video is too wide, you have black bars on either side of the video.
+                // We need this to move the clicks over the hotspots.
 
                 var aspectquery = Utilities.GetMax(ClickSurface.ActualWidth, ClickSurface.ActualHeight, _OriginalAspectRatio);
                 var clickareawidth = ClickSurface.ActualWidth;
@@ -104,23 +154,26 @@ namespace KlingonWin10WPF
                         break;
                 }
                 
-
-                //var relclickX = (int)_lastClickPoint.X; //(int)(((_lastClickPoint.X / clickareawidth) * _OriginalMainVideoWidth) - clickOffsetL);
-                //var relclickY = (int)_lastClickPoint.Y; //(int)(((_lastClickPoint.Y / clickareaheight) * _OriginalMainVideoHeight) - clickOffsetT);
+                // This is the translated click coordinates in the original video frame (height/width)
                 var relclickX = (int)(((_lastClickPoint.X / clickareawidth) * _OriginalMainVideoWidth) - clickOffsetL);
                 var relclickY = (int)(((_lastClickPoint.Y / clickareaheight) * _OriginalMainVideoHeight) - clickOffsetT);
                 long time = 0;
                 TimeSpan ts = TimeSpan.Zero;
+                // When you click, it shows a debug message on the output window.  Including the current time in milliseconds since video start.
                 if (_MainVideoLoaded)
                 {
                     time = VideoView.MediaPlayer.Time;
                     ts = TimeSpan.FromMilliseconds(time);
                 }
                 System.Diagnostics.Debug.WriteLine("{0},{1}({2},{3})[{4}] - t{5} - f{6}", _lastClickPoint.X, _lastClickPoint.Y, relclickX, relclickY, ts.ToString(@"hh\:mm\:ss"), (long)((float)time), Utilities.MsTo15fpsFrames(time));
+                
+                // If we have loaded the main video and player..   Tell it a user clickdd!
                 if (_MainVideoLoaded && _mainScenePlayer != null && !string.IsNullOrEmpty(_mainScenePlayer.ScenePlaying))
                 {
-                    _mainScenePlayer.MouseClick(relclickX, relclickY, VideoView.MediaPlayer.IsPlaying);
+                    _mainScenePlayer.MouseClick(relclickX, relclickY);
                 }
+
+                // trnslated click Visualization for the click spot
                 if (_clickRectangle == null)
                 {
                     _clickRectangle = new Rectangle();
@@ -131,6 +184,11 @@ namespace KlingonWin10WPF
                     _clickRectangle.Width = 2;
                     _clickRectangle.Stroke = new SolidColorBrush(Colors.Pink);
                     _clickRectangle.StrokeThickness = 2;
+                    if (txtMS.Visibility == Visibility.Visible && txtOffsetMs.Visibility == Visibility.Visible)
+                        _clickRectangle.Visibility = Visibility.Visible;
+                    else
+                        _clickRectangle.Visibility = Visibility.Collapsed;
+
                     VVGrid.Children.Add(_clickRectangle);
                 }
                 else
@@ -144,39 +202,75 @@ namespace KlingonWin10WPF
 
             };
 
-
+            // Oh hey! our main form loaded!   Let's do stuff!
             Loaded += (s, e) =>
             {
+                // UWP app, We run these statements to push the video area into the titlebar.
+
                 //ApplicationViewTitleBar formattableTitleBar = ApplicationView.GetForCurrentView().TitleBar;
                 //formattableTitleBar.ButtonBackgroundColor = Colors.Transparent;
                 //CoreApplicationViewTitleBar coreTitleBar = CoreApplication.GetCurrentView().TitleBar;
                 //coreTitleBar.ExtendViewIntoTitleBar = true;
 
+                // Oh No.  We have a Un handle d.  Err or. Show The Use er!
+                Application.Current.DispatcherUnhandledException += (o, err) =>
+                {
+                    Exception unhandledException = err.Exception;
+                    if (!(unhandledException is OutOfMemoryException || unhandledException is StackOverflowException || unhandledException is SEHException))
+                    {
+
+                        // Because vlc player only lets you draw controlls on top of it if the controls are in the content of the tag..  
+                        // We have to show errors in potentially two spots.   Spot 1.   If the video player is loaded.
+                        // Spot 2!   If the vido player isn't loaded.
+
+                        // Video Player Loaded
+                        if (_mainScenePlayer != null)
+                        {
+                            txtGenericErrorText.Text = unhandledException.Message;
+                            GenericErrorDialog.Visibility = Visibility.Visible;
+                            _mcurVisible = true;
+                            CurEmulator.Source = dktahgCursor;
+                            AnimationBehavior.SetSourceUri(CurEmulator, dktahgCursor.UriSource);
+                            CurEmulator.Visibility = Visibility.Visible;
+                            err.Handled = true;
+                            return;
+                        }
+
+                        // Video player not loaded.
+                        VideoErrorDialog.Visibility = Visibility.Visible;
+                        txtVideoErrorText.Text = unhandledException.Message;
+                        _mcurVisible = true;
+                        CurEmulator.Source = dktahgCursor;
+                        AnimationBehavior.SetSourceUri(CurEmulator, dktahgCursor.UriSource);
+                        CurEmulator.Visibility = Visibility.Visible;
+                        err.Handled = true;
+                        err.Handled = true;
+                    }
+                };
+
+                // When the libVLC player control is loaded, initialize the unmanaged libVLC library. 
+                // Loading order is not guaranteed so..    the other viewer may load first.
+                // Only initialize libvlc once.
                 VideoView.Loaded += (s1, e1) =>
                 {
                     if (!_coreVLCInitialized)
                     {
                         _coreVLCInitialized = true;
                         Core.Initialize();
+
+                        // Command line options to VLC
+                        List<string> options = new List<string>();
+                      
+                        var optionsarray = options.ToArray();
+                        _libVLCMain = new LibVLC(optionsarray);
+                        _libVLCInfo = _libVLCMain;
                     }
-                    List<string> options = new List<string>();
-                    //options.AddRange(VideoView.SwapChainOptions.ToList());
-                    //options.Add("--verbose=2");
-                    //options.Add("--sout-delay-id=1");
-                    //options.Add("--sout-delay-delay=2000");
-                    //options.Add("--sout-display-delay=3000");
-                    //options.Add("--audio-desync=-5000");
-                    //options.Add("--avi-index=1");
-                    var optionsarray = options.ToArray();
-                    _libVLCMain = new LibVLC(optionsarray);
+                    
                     _mediaPlayerMain = new LibVLCSharp.Shared.MediaPlayer(_libVLCMain);
                     VideoView.MediaPlayer = _mediaPlayerMain;
-                    //_mediaPlayerMain.EnableMouseInput = false;
-                    //_mediaPlayerMain.EnableKeyInput = false;
 
-                    _libVLCMain.Log += Log_Fired;
-
-
+                    // If you want console spam.  Uncomment this and the line in log_fired to lag the game..   and..  get the reason why libVLC is not happy.
+                    // _libVLCMain.Log += Log_Fired;
 
 
                     VideoView.PreviewMouseDown += (s2,e2) =>
@@ -252,24 +346,35 @@ namespace KlingonWin10WPF
                     
                     
                 };
+
+                // When the libVLC player control is loaded, initialize the unmanaged libVLC library. 
+                // Loading order is not guaranteed so..    the other viewer may load first.
+                // Only initialize libvlc once.
                 VideoInfo.Loaded += (s2, e2) =>
                 {
                     if (!_coreVLCInitialized)
                     {
                         _coreVLCInitialized = true;
                         Core.Initialize();
+                        // Command line Options to VLC
+                        List<string> options = new List<string>();
+                        var optionsarray = options.ToArray();
+                        _libVLCMain = new LibVLC(optionsarray);
+                        _libVLCInfo = _libVLCMain;
                     }
                     List<string> options2 = new List<string>();
                     //options.AddRange(VideoInfo.SwapChainOptions.ToList());
                     //options.Add("--verbose=2");
 
-                    _libVLCInfo = new LibVLC();
+                    _libVLCInfo = _libVLCMain;//new LibVLC();
+
                     var _mediaPlayerInfo = new LibVLCSharp.Shared.MediaPlayer(_libVLCInfo);
                     VideoInfo.MediaPlayer = _mediaPlayerInfo;
                     _mediaPlayerInfo.EnableMouseInput = false;
                     _mediaPlayerInfo.EnableKeyInput = false;
 
-                    _libVLCInfo.Log += Log_Fired;
+                    // Uncomment this and the line in log_fired to lag the game..   and..  get the reason why libVLC is not happy.
+                    //_libVLCInfo.Log += Log_Fired;
 
                     var InfoScenes = _scenes.Where(xy => xy.SceneType == SceneType.Info).ToList();
                     _infoScenes = InfoScenes;
@@ -282,6 +387,7 @@ namespace KlingonWin10WPF
                     Load_Computer_list(_computerScenes);
 
                 };
+
                 // Save this as a delgate because we need to hook/unhook it
                 lstSceneChanged =  (o, arg) =>
                 {
@@ -320,10 +426,13 @@ namespace KlingonWin10WPF
 
 
                 this._libVLCMain.Dispose();
-                this._libVLCInfo.Dispose();
+                //this._libVLCInfo.Dispose(); // Kept separate for the UWP app that needs 2 of them.
             };
+
+            // Window size changes!
             SizeChanged += (s, e) => WindowResized( s,  e);
 
+            // When you maximize the window..    trigger reize also.
             this.StateChanged += (s, e) =>
              {
                  if (this.WindowState == WindowState.Maximized)
@@ -332,8 +441,18 @@ namespace KlingonWin10WPF
                  }
              };
 
+            // You clicked New game!
             btnNewGame.Click += (s, e) =>
             {
+                string FileCheckResult = Utilities.CheckForOriginalMedia();
+                if (!string.IsNullOrEmpty(FileCheckResult))
+                {
+                    // Display message.
+                    txtVideoErrorText.Text = FileCheckResult;
+                    VideoErrorDialog.Visibility = Visibility.Visible;
+                    return;
+                }
+                VideoErrorDialog.Visibility = Visibility.Collapsed;
                 PrepPlayer();
                 _mainScenePlayer.TheSupportingPlayer = _supportingPlayer;
                 WindowResized(this, null);
@@ -344,8 +463,42 @@ namespace KlingonWin10WPF
 
             };
 
-            
+            // You clicked OK on the video not found error message
+            btnVideoFileMissingOKCancel.Click += (s, e) =>
+            {
+                VideoErrorDialog.Visibility = Visibility.Collapsed;
+                _mcurVisible = false;
+                CurEmulator.Source = dktahgCursor;
+                
+                CurEmulator.Visibility = Visibility.Collapsed;
+                
+            };
 
+            // You clicked OK on the error message.  This is an Unhandled Error!   Baaaaad.   So try to autosave and quit.!
+            btnGenericcErrorOKCancel.Click += async (s, e) =>
+            {
+                try
+                {
+                    var savedata = _mainScenePlayer.GetSaveInfo();
+                    DateTime now = DateTime.Now;
+                    string SaveName = string.Format("AutoSave_{0}{1}{2}{3}{4}{5}", now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
+                    SaveDefinition info = _mainScenePlayer.GetSaveInfo();
+
+                    info.SaveName = SaveName;
+
+                    List<SaveDefinition> saves = await SaveLoader.LoadSavesFromAsset("RIVER.TXT");
+                    saves.Add(info);
+                    await SaveLoader.SaveSavesToAsset(saves, "RIVER.TXT");
+
+                }
+                catch
+                {
+                    // Whoops  can't do anything about it.
+                }
+                Close();
+            };
+
+            // Debug when you play a computer video scene
             lstComputer.SelectionChanged += (s, e) =>
             {
 
@@ -371,11 +524,14 @@ namespace KlingonWin10WPF
                 }
             };
 
+            // Window says mouse has moved.
             this.MouseMove += (s, e) =>
             {
                 Mouse_Moved();
 
             };
+
+            // You clicked Load game!   Show your saves and the Load game button!
             btnLoadGame.Click += async (s, e) =>
             {
 
@@ -388,6 +544,7 @@ namespace KlingonWin10WPF
                 //
             };
 
+            // You picked one of your saved games!   Enable the load button!
             lstRiver.SelectionChanged += (s, e) =>
             {
                 if (lstRiver.SelectedIndex >= 0)
@@ -400,6 +557,7 @@ namespace KlingonWin10WPF
                 }
             };
 
+            // You clicked load!  Get your save from the saves file called 'River.txt' and load your game!
             btnLoad.Click += async (s, e) =>
             {
                 if (lstRiver.SelectedIndex >= 0)
@@ -417,6 +575,21 @@ namespace KlingonWin10WPF
                     if (savedef != null)
                     {
                         LoadDialog.Visibility = Visibility.Collapsed;
+                        string FileCheckResult = Utilities.CheckForOriginalMedia();
+                        if (!string.IsNullOrEmpty(FileCheckResult))
+                        {
+                            // Display message.
+                            txtVideoErrorText.Text = FileCheckResult;
+                            VideoErrorDialog.Visibility = Visibility.Visible;
+
+                            _mcurVisible = true;
+                            CurEmulator.Source = dktahgCursor;
+                            AnimationBehavior.SetSourceUri(CurEmulator, dktahgCursor.UriSource);
+                            CurEmulator.Visibility = Visibility.Visible;
+                            
+                            return;
+                        }
+                        VideoErrorDialog.Visibility = Visibility.Collapsed;
                         PrepPlayer();
                         _mainScenePlayer.TheSupportingPlayer = _supportingPlayer;
                         WindowResized(this, null);
@@ -426,16 +599,24 @@ namespace KlingonWin10WPF
                 }
 
             };
+
+
+            // You cancelled your game load!  Make up your mind!
+
             btnLoadCancel.Click += (s, e) =>
             {
                 LoadDialog.Visibility = Visibility.Collapsed;
             };
+
+            // You're quitting the game!   Fill out my survey.  Like..  Follow..  Subscribe!
             btnQuitGame.Click += (s, e) =>
             {
                 VideoView.Width = VideoViewGrid.ActualWidth;
                 VideoView.Height = VideoViewGrid.ActualHeight;
                 Quit();
             };
+
+            // Create the Spinning klingon logo cursor to show the user when the game is paused.
             HolodeckCursor = new BitmapImage();
             HolodeckCursor.BeginInit();
             HolodeckCursor.UriSource = new Uri(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Assets", "KlingonHolodeckCur.gif"));
@@ -444,6 +625,7 @@ namespace KlingonWin10WPF
             new BitmapImage(new Uri(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Assets", "KlingonHolodeckCur.gif")));
 
 
+            // Create the Klingon knife cursor for the action scenes where we demand the user do something!
             dktahgCursor = new BitmapImage();
             dktahgCursor.BeginInit();
             dktahgCursor.UriSource = new Uri(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Assets", "dktahg.gif"));// new BitmapImage(new Uri(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Assets", "dktahg.gif")));
@@ -451,6 +633,7 @@ namespace KlingonWin10WPF
 
             AnimationBehavior.SetSourceUri(CurEmulator, dktahgCursor.UriSource);
 
+            // You have cancelled the save dialog.
             btnSaveCancel.Click += (s, e) =>
             {
                 if (!VideoView.MediaPlayer.IsPlaying)
@@ -462,6 +645,10 @@ namespace KlingonWin10WPF
                 AnimationBehavior.SetSourceUri(CurEmulator, dktahgCursor.UriSource);
                 CurEmulator.Visibility = Visibility.Collapsed;
             };
+
+            // You clicked the save button!
+
+            // Get the user game state from the player and save it to the save file!
             btnSave.Click += async (s, e) =>
             {
                 string SaveName = txtSaveName.Text;
@@ -503,6 +690,9 @@ namespace KlingonWin10WPF
 
 
             };
+
+            // You clicked the clickable surface!   Start a timer..  to see if you only single clickd or double clicked.  
+            // If the timer fires..  you have single clickddd.  If it doesn't fire you have double clickdd.
             ClickSurface.Click += (o, cEventArgs) =>
             {
                 var tappedspot = Mouse.GetPosition(ClickSurface);
@@ -516,6 +706,7 @@ namespace KlingonWin10WPF
                 }
 
             };
+            // You have double clicked!   Huraah.  This one is easy.
             ClickSurface.MouseDoubleClick += (o, cEventArgs) =>
             {
                 if (!_actionTime) // No pausing during active time.  It is too difficult to separate single and double clicks during some scenes that you need to rapid click.
@@ -530,6 +721,14 @@ namespace KlingonWin10WPF
                 }
 
             };
+            ClickSurface.KeyUp += (o4, s5) =>
+            {
+                Keyup(o4, s5);
+            };
+
+            // All the mouse move event relays!
+            // Everything has to have a mouse move event otherwise when the mouse is over
+            // that thing that doesn't..  the Cursor Emulator won't move there.
             ClickSurface.MouseMove += (o, cEventArgs) =>
             {
                 Mouse_Moved();
@@ -537,10 +736,6 @@ namespace KlingonWin10WPF
             CurEmulator.MouseMove += (o, cEventArgs) =>
             {
                 Mouse_Moved();
-            };
-            ClickSurface.KeyUp += (o4, s5) =>
-            {
-                Keyup(o4, s5);
             };
             txtSaveText.MouseMove += (o, cEventArgs) =>
             {
@@ -578,6 +773,24 @@ namespace KlingonWin10WPF
             {
                 Mouse_Moved();
             };
+            GenericErrorDialog.MouseMove += (o, cEventArgs) =>
+            {
+                Mouse_Moved();
+            };
+            VideoErrorDialog.MouseMove += (o, cEventArgs) =>
+            {
+                Mouse_Moved();
+            };
+            btnGenericcErrorOKCancel.MouseMove += (o, cEventArgs) =>
+            {
+                Mouse_Moved();
+            };
+            btnVideoFileMissingOKCancel.MouseMove += (o, cEventArgs) =>
+            {
+                Mouse_Moved();
+            };
+
+
 
         }
         private void Mouse_Moved()
@@ -585,6 +798,8 @@ namespace KlingonWin10WPF
             
             var point = Mouse.GetPosition(ClickSurface);
             
+            // If the mouse is close to the top of the window, show the title bar.  If it is far away..  hide the title bar.
+            // Also..  because the window reisizes..  fix the math for the click translation.
             if (point.Y < _titlebarShowHeight && WindowStyle == WindowStyle.None)
             {
                 _titlebarcurrentsize = _titlebarsize;
@@ -597,20 +812,25 @@ namespace KlingonWin10WPF
                 _titlebarcurrentsize = _titlebarinvisibleheight;
                 WindowResized(this, null);
             }
+            // Don't move the cursor emulator if it isn't visible.
             if (!_mcurVisible)
                 return;
             CurEmulator.Margin = new Thickness(point.X, point.Y + 1, 0, 0);
         }
+
+        // We have resized the window.  Adjust all the maths!
         private void WindowResized(object o, SizeChangedEventArgs e)
         {
 
             var width = this.ActualWidth;
             var height = this.ActualHeight;
+
             if (e != null)
             {
                 width = e.NewSize.Width;
                 height = e.NewSize.Height;
             }
+
             width = width - 15;
             height = height - _titlebarcurrentsize;
             VideoViewGrid.Width = width;
@@ -625,10 +845,10 @@ namespace KlingonWin10WPF
                     switch (aspectquery.Direction)
                     {
                         case "W":
-                            //_mainScenePlayer.HotspotScale = (float)(width / _OriginalMainVideoWidth);
+                            _mainScenePlayer.HotspotScale = (float)(width / _OriginalMainVideoWidth);
                             break;
                         case "H":
-                            //_mainScenePlayer.HotspotScale = (float)(height / _OriginalMainVideoHeight);
+                            _mainScenePlayer.HotspotScale = (float)(height / _OriginalMainVideoHeight);
                             break;
                     }
                 }
@@ -819,6 +1039,13 @@ namespace KlingonWin10WPF
         }
         private void Quit()
         {
+            string FileCheckResult = Utilities.CheckForOriginalMedia();
+            if (!string.IsNullOrEmpty(FileCheckResult))
+            {
+                // Display message.
+                Close();
+            }
+            
             SceneDefinition scene = null;
             if (_scenes != null && _scenes.Count == 0)
             {

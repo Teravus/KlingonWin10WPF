@@ -252,16 +252,9 @@
     <Content Include="Assets\scenes.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="CDAssets\computer.avi" />
-    <Content Include="CDAssets\holodeck.avi" />
     <Resource Include="CDAssets\hotspots.txt" />
-    <Content Include="CDAssets\IP_1.AVI" />
-    <Content Include="CDAssets\MAIN_1.AVI" />
-    <Content Include="CDAssets\MAIN_2.AVI" />
     <Resource Include="CDAssets\RIVER.TXT" />
     <Resource Include="CDAssets\scenes.txt" />
-    <Content Include="CDAssets\SS_1.AVI" />
-    <Content Include="CDAssets\SS_2.AVI" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="klingon.ico" />

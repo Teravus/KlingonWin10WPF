@@ -501,6 +501,41 @@
 
                     </Grid>
                 </Canvas>
+                <Canvas VerticalAlignment="Center" HorizontalAlignment="Center" x:Name="GenericErrorDialog" Visibility="Collapsed" Width="606" Height="406" Background="DarkRed" >
+                    <Grid Background="Black" Height="400" Width="600" HorizontalAlignment="Center" Margin="3,3,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="1*" />
+
+                            <RowDefinition Height="6*" />
+                            <RowDefinition Height="1*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock x:Name="txtGenericTextMessage"  Text="An error occurred while playing the game." Grid.Column="0" Grid.Row="0" Foreground="Orange" FontWeight="Bold" FontSize="16" Width="500" TextWrapping="Wrap" />
+                        <TextBlock x:Name="txtGenericErrorText" HorizontalAlignment="Center" Text="The game video wasn't found.  Please check the github readme for how to prepare the original game media." Grid.Column="0" Grid.Row="1" Foreground="Red" FontWeight="Bold" FontSize="16" Width="500" TextWrapping="Wrap" Margin="50,0" />
+
+
+                        <Button Content="OK" x:Name="btnGenericcErrorOKCancel" Grid.Row="3" Grid.Column="0" Margin="0,0,0,0" Background="DarkRed" Foreground="Orange" HorizontalAlignment="Center" Width="80" Height="25">
+                            <!--<Button.Resources>
+                        <ResourceDictionary>
+                            <ResourceDictionary.ThemeDictionaries>
+                                <ResourceDictionary x:Key="Dark">
+                                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="Orange"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="DarkRed"/>
+                                </ResourceDictionary>
+                                <ResourceDictionary x:Key="Light">
+                                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="Orange"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="DarkRed"/>
+                                </ResourceDictionary>
+                            </ResourceDictionary.ThemeDictionaries>
+                        </ResourceDictionary>
+                    </Button.Resources>-->
+                        </Button>
+
+                    </Grid>
+                </Canvas>
                 <Image x:Name="CurEmulator" gif:AnimationBehavior.SourceUri="{Binding SelectedImage}" gif:AnimationBehavior.RepeatBehavior="{Binding RepeatBehavior}" Source="/Assets/dktahg.gif" Width="41" Height="48" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed"  />
             </Grid>
 
@@ -617,7 +652,41 @@
             </Grid>
 
         </Canvas>
+        <Canvas VerticalAlignment="Center" HorizontalAlignment="Center" x:Name="VideoErrorDialog" Visibility="Collapsed" Width="606" Height="406" Background="DarkRed" >
+            <Grid Background="Black" Height="400" Width="600" HorizontalAlignment="Center" Margin="3,3,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*" />
 
+                    <RowDefinition Height="6*" />
+                    <RowDefinition Height="1*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="txtVideoGenericText"  Text="There was a problem loading the game." Grid.Column="0" Grid.Row="0" Foreground="Orange" FontWeight="Bold" FontSize="16" Width="500" TextWrapping="Wrap" />
+                <TextBlock x:Name="txtVideoErrorText" HorizontalAlignment="Center" Text="The game video wasn't found.  Please check the github readme for how to prepare the original game media." Grid.Column="0" Grid.Row="1" Foreground="Red" FontWeight="Bold" FontSize="16" Width="500" TextWrapping="Wrap" Margin="50,0" />
+
+                
+                <Button Content="OK" x:Name="btnVideoFileMissingOKCancel" Grid.Row="3" Grid.Column="0" Margin="0,0,0,0" Background="DarkRed" Foreground="Orange" HorizontalAlignment="Center" Width="80" Height="25">
+                    <!--<Button.Resources>
+                        <ResourceDictionary>
+                            <ResourceDictionary.ThemeDictionaries>
+                                <ResourceDictionary x:Key="Dark">
+                                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="Orange"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="DarkRed"/>
+                                </ResourceDictionary>
+                                <ResourceDictionary x:Key="Light">
+                                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="Orange"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="DarkRed"/>
+                                </ResourceDictionary>
+                            </ResourceDictionary.ThemeDictionaries>
+                        </ResourceDictionary>
+                    </Button.Resources>-->
+                </Button>
+
+            </Grid>
+        </Canvas>
 
 
     </Grid>
