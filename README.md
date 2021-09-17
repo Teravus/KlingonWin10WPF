@@ -1,7 +1,7 @@
 # KlingonWin10WPF
- From Scratch reimplementation of the Star Trek: Klingon Immersion Studies in a Windows 10 Compatible executable.  
+ Unofficial, reimplementation of the Star Trek: Klingon Immersion Studies in a Windows 10 Compatible executable.  
  
- The latest version of Windows that you can play the original Star Trek: Klingon immersion studies is windows 98.
+ The last version of Windows that you can play the original Star Trek: Klingon immersion studies is windows 98.
  
  The goal is to allow you to play the game on newer computers.
  
@@ -91,11 +91,11 @@ Windows is a trademark and Microsoft is a registered trademark of Microsoft Corp
 
 ---
 
-The remake of the FMV engine is completely from scratch and includes none of the game assets or content.  Simon & Schuster never released code for the original edition. 
+The remake of the FMV engine is entirely new and includes none of the game assets or content.  Simon & Schuster never released code for the original edition. 
 
 ---
 
-The code for the engine is released under the the MIT license.  It makes use of libVLC which is released under the GNU Lesser GPL licence, version 2.1.
+The code for the engine is released under the the MIT license. It makes use of libvlc and libvlcsharp as a video player which is released under the GNU Lesser GPL licence, version 2.1. https://github.com/videolan/libvlcsharp/ 
 
 If you need to contact me about a legal issue regarding this software, please do so at Teravus at gmail dot com.  Or Discord: RebootTech#6247
 
