@@ -71,7 +71,9 @@ namespace KlingonWin10WPF
         private bool _challengeSectionNotificationComplete = false;
     
         private bool _visualizationEnabled = false;
-        
+        public double VisualizationWidthMultiplier = 1d;
+        public double VisualizationHeightMultiplier = 1d;
+
         // internal game progress counters
         private int _inactionacount = 0;
         private int _bombattemptcount = 1;
@@ -149,6 +151,7 @@ namespace KlingonWin10WPF
                     };
                 }
             }
+            
         }
 
         List<SceneDefinition> DoNothingVideos = new List<SceneDefinition>();
@@ -796,10 +799,10 @@ namespace KlingonWin10WPF
                 return;
 
             foreach (var item in _currentScene.PlayingHotspots)
-                item.Draw(ParentGrid, _displayElement.MediaPlayer.Time, _currentScene);
+                item.Draw(ParentGrid, _displayElement.MediaPlayer.Time, _currentScene, VisualizationWidthMultiplier, VisualizationHeightMultiplier);
 
             foreach (var item in _currentScene.PausedHotspots)
-                item.Draw(ParentGrid, _displayElement.MediaPlayer.Time, _currentScene);
+                item.Draw(ParentGrid, _displayElement.MediaPlayer.Time, _currentScene, VisualizationWidthMultiplier, VisualizationHeightMultiplier);
 
             _visualizationEnabled = true;
         }
@@ -947,7 +950,10 @@ namespace KlingonWin10WPF
                 case SceneType.Inaction:
                     if (_lastPlayheadMS >= _currentScene.EndMS - 2000)
                     {
-                        bool exceededinactiontries = _inactionacount >= DoNothingVideos.Count;
+                        int vidcount = DoNothingVideos.Count;
+                        if (vidcount > 4)
+                            vidcount = 4;
+                        bool exceededinactiontries = _inactionacount >= vidcount;
                         if (exceededinactiontries) // Restart!
                         {
                             _inactionacount = 0;
@@ -976,11 +982,24 @@ namespace KlingonWin10WPF
             {
                 Grid ParentGrid = _displayElement.Parent as Grid;
                 foreach (var item in _currentScene.PlayingHotspots)
-                    item.Draw(ParentGrid, _displayElement.MediaPlayer.Time, _currentScene);
+                    item.Draw(ParentGrid, _displayElement.MediaPlayer.Time, _currentScene, VisualizationWidthMultiplier, VisualizationHeightMultiplier);
 
                 foreach (var item in _currentScene.PausedHotspots)
-                    item.Draw(ParentGrid, _displayElement.MediaPlayer.Time, _currentScene);
+                    item.Draw(ParentGrid, _displayElement.MediaPlayer.Time, _currentScene, VisualizationWidthMultiplier, VisualizationHeightMultiplier);
             }
+        }
+
+        /// <summary>
+        /// Gets a properly named MP4 file or AVI file.   Assumes you know what you're doing and the timing of the videos are the same.
+        /// </summary>
+        /// <param name="input">AVI File name</param>
+        /// <returns>MP4 Filename if it exists or AVI filename.</returns>
+        public string GetMP4OrAVI(string input)
+        {
+            string mp4name = input.Replace("X.AVI", "X.mp4");
+            if (System.IO.File.Exists(mp4name))
+                return mp4name;
+            return input;
         }
         /// <summary>
         /// Called by the PrepVideo Function in The UI.  Loads and starts the first Main video.
@@ -992,7 +1011,7 @@ namespace KlingonWin10WPF
         {
             _vlcInstance = _libVLCMain;
             LoadedVideoInfo result = null;
-            string videopath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(),"CDAssets", string.Format("MAIN_{0}X.AVI",CD));
+            string videopath = GetMP4OrAVI(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(),"CDAssets", string.Format("MAIN_{0}X.AVI",CD)));
             var filters = _vlcInstance.AudioFilters;
 
             
@@ -1030,6 +1049,39 @@ namespace KlingonWin10WPF
                     }
                 }
                 result.MaxVideoMS = media.Duration;
+                
+                if (result.OriginalMainVideoHeight == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("[WARN]: Unable to determine media height. Making some guesses.");
+                    // We were not able to get the media information for some reason.   Make some guesses based on the extension
+                    string videoPathLower = videopath.ToLower();
+                    if (videoPathLower.EndsWith("x.mp4"))
+                    {
+                        // This is most likely the upscaled media
+                        result.OriginalMainVideoHeight = 800;
+                    }
+                    if (videoPathLower.EndsWith("x.avi"))
+                    {
+                        // This is most likely the upscaled media
+                        result.OriginalMainVideoHeight = 200;
+                    }
+                }
+                if (result.OriginalMainVideoWidth == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("[WARN]: Unable to determine media width. Making some guesses.");
+                    // We were not able to get the media information for some reason.   Make some guesses based on the extension
+                    string videoPathLower = videopath.ToLower();
+                    if (videoPathLower.EndsWith("x.mp4"))
+                    {
+                        // This is most likely the upscaled media
+                        result.OriginalMainVideoWidth = 1280;
+                    }
+                    if (videoPathLower.EndsWith("x.avi"))
+                    {
+                        // This is most likely the upscaled media
+                        result.OriginalMainVideoWidth = 320;
+                    }
+                }
                 result.Loaded = true;
                 
             }
@@ -1056,7 +1108,7 @@ namespace KlingonWin10WPF
                     filename = string.Format("SS_{0}X.AVI", CD);
                     break;
             }
-            string assetpath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "CDAssets", filename);
+            string assetpath = GetMP4OrAVI(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "CDAssets", filename));
             if (!string.IsNullOrEmpty(filename) && filename != _loadedVideoFile)
             {
                 _loadedVideoFile = filename;
@@ -1100,6 +1152,38 @@ namespace KlingonWin10WPF
                         originalMainVideoHeight = (int)media.Tracks[0].Data.Video.Height;
                         originalMainVideoWidth = (int)media.Tracks[0].Data.Video.Width;
                         
+                    }
+                }
+                if (originalMainVideoHeight == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("[WARN]: Unable to determine media height. Making some guesses.");
+                    // We were not able to get the media information for some reason.   Make some guesses based on the extension
+                    string videoPathLower = path.ToLower();
+                    if (videoPathLower.EndsWith("x.mp4"))
+                    {
+                        // This is most likely the upscaled media
+                        originalMainVideoHeight = 800;
+                    }
+                    if (videoPathLower.EndsWith("x.avi"))
+                    {
+                        // This is most likely the upscaled media
+                        originalMainVideoHeight = 200;
+                    }
+                }
+                if (originalMainVideoWidth == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("[WARN]: Unable to determine media width. Making some guesses.");
+                    // We were not able to get the media information for some reason.   Make some guesses based on the extension
+                    string videoPathLower = path.ToLower();
+                    if (videoPathLower.EndsWith("x.mp4"))
+                    {
+                        // This is most likely the upscaled media
+                        originalMainVideoWidth = 1280;
+                    }
+                    if (videoPathLower.EndsWith("x.avi"))
+                    {
+                        // This is most likely the upscaled media
+                        originalMainVideoWidth = 320;
                     }
                 }
                 maxVideoMS = media.Duration;

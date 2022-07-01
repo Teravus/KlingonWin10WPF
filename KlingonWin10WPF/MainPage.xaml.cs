@@ -47,6 +47,9 @@ namespace KlingonWin10WPF
         private static double _OriginalMainVideoHeight = 200d;
         private static double _OriginalMainVideoWidth = 320d;
 
+        private static double _HotspotOriginalMainVideoHeight = 200d;
+        private static double _HotspotOriginalMainVideoWidth = 320d;
+
         // Aspect ratio.  Used for calculating the black bar offset when window doesn't match the aspect ratio.
         private double _OriginalAspectRatio = _OriginalMainVideoWidth / _OriginalMainVideoHeight;
 
@@ -121,7 +124,13 @@ namespace KlingonWin10WPF
                 Keyup(ob, ea);
 
             };
-           
+
+            this.KeyDown += (ob, ea) =>
+            {
+                Keydown(ob, ea);
+
+            };
+
             _clickTimer.Interval = TimeSpan.FromSeconds(0.2); //wait for the other click for 200ms
 
             // Hey this fired!   That means a user single clickdd!
@@ -130,33 +139,22 @@ namespace KlingonWin10WPF
                 lock (_clickTimer)
                     _clickTimer.Stop();
                 // Fire Single Click.
-                
+
                 // We have to figure out the aspect ratio of the window...  and figure out how much
                 // larger than the ideal length for the aspect ratio the window is..  in order to deal with black bars.
                 // Another way to put it:  If the video is too wide, you have black bars on either side of the video.
                 // We need this to move the clicks over the hotspots.
 
-                var aspectquery = Utilities.GetMax(ClickSurface.ActualWidth, ClickSurface.ActualHeight, _OriginalAspectRatio);
                 var clickareawidth = ClickSurface.ActualWidth;
                 var clickareaheight = ClickSurface.ActualHeight;
-                var clickOffsetL = 0d;
-                var clickOffsetT = 12d;
 
-                switch (aspectquery.Direction)
-                {
-                    case "W":
-                        clickareawidth = aspectquery.Length;
-                        clickOffsetL = (ClickSurface.ActualWidth - clickareawidth) * 0.106d; // Why are we chopping it into almost thirds instead of half 0.376d?  This should be the black bar width for top and bottom.
-                        break;
-                    case "H":
-                        clickareaheight = aspectquery.Length;
-                        clickOffsetT = (ClickSurface.ActualHeight - clickareaheight) * 0.376d;
-                        break;
-                }
-                
-                // This is the translated click coordinates in the original video frame (height/width)
-                var relclickX = (int)(((_lastClickPoint.X / clickareawidth) * _OriginalMainVideoWidth) - clickOffsetL);
-                var relclickY = (int)(((_lastClickPoint.Y / clickareaheight) * _OriginalMainVideoHeight) - clickOffsetT);
+                // ILOVEPIE ( https://github.com/ILOVEPIE )  suggested this alternative to my broken home-grown code.
+                var letterbox_width = Math.Max(0, clickareawidth - (_OriginalAspectRatio * clickareaheight)) / 2;
+                var letterbox_height = Math.Max(0, clickareaheight - (clickareawidth / _OriginalAspectRatio)) / 2;
+
+                var relclickX = (int)((_lastClickPoint.X - letterbox_width) / ((clickareawidth - (letterbox_width * 2)) / _HotspotOriginalMainVideoWidth));
+                var relclickY = (int)((_lastClickPoint.Y - letterbox_height) / ((clickareaheight - (letterbox_height * 2)) / _HotspotOriginalMainVideoHeight));
+
                 long time = 0;
                 TimeSpan ts = TimeSpan.Zero;
                 // When you click, it shows a debug message on the output window.  Including the current time in milliseconds since video start.
@@ -195,10 +193,6 @@ namespace KlingonWin10WPF
                 {
                     _clickRectangle.Margin = new Thickness(relclickX, relclickY, 0, 0);// right - left, bot - top);
                 }
-                //VideoView.MediaPlayer.Pause();
-                //VideoView.MediaPlayer.Time = 269200;
-
-
 
             };
 
@@ -335,16 +329,28 @@ namespace KlingonWin10WPF
                     {
                         Keyup(o4, s5);
                     };
+                    VideoViewGrid.KeyDown += (o4, s5) =>
+                    {
+                        Keydown(o4, s5);
+                    };
                     this.KeyUp += (o4, s5) =>
                     {
                         Keyup(o4, s5);
+                    };
+                    this.KeyDown += (o4, s5) =>
+                    {
+                        Keydown(o4, s5);
                     };
                     VideoView.KeyUp += (o4, s5) =>
                     {
                         Keyup(o4, s5);
                     };
-                    
-                    
+                    VideoView.KeyDown += (o4, s5) =>
+                    {
+                        Keydown(o4, s5);
+                    };
+
+
                 };
 
                 // When the libVLC player control is loaded, initialize the unmanaged libVLC library. 
@@ -725,6 +731,10 @@ namespace KlingonWin10WPF
             {
                 Keyup(o4, s5);
             };
+            ClickSurface.KeyDown += (o4, s5) =>
+            {
+                Keydown(o4, s5);
+            };
 
             // All the mouse move event relays!
             // Everything has to have a mouse move event otherwise when the mouse is over
@@ -793,6 +803,9 @@ namespace KlingonWin10WPF
 
 
         }
+
+      
+
         private void Mouse_Moved()
         {
             
@@ -862,6 +875,20 @@ namespace KlingonWin10WPF
             //VideoView.HorizontalAlignment = HorizontalAlignment.Left;
             //VideoView.VerticalAlignment = VerticalAlignment.Top;
         }
+
+        private void Keydown(object o, KeyEventArgs ea)
+        {
+            if (_MainVideoLoaded)
+            {
+                switch (ea.Key)
+                {
+                    case Key.H:
+                        tbHelpText.Visibility = Visibility.Visible;
+                        break;
+                }
+            }
+        }
+
         private void Keyup(object o, KeyEventArgs ea)
         {
             if (_MainVideoLoaded)
@@ -935,6 +962,7 @@ namespace KlingonWin10WPF
                             lstScene.Visibility = Visibility.Collapsed;
                             lstComputer.Visibility = Visibility.Collapsed;
                             CurEmulator.Visibility = Visibility.Collapsed;
+                            tbDebugTextBlock.Visibility = Visibility.Collapsed;
                             _mainScenePlayer.VisualizeRemoveHotspots();
                             if (_clickRectangle != null)_clickRectangle.Visibility = Visibility.Collapsed;
                             _mcurVisible = false;
@@ -946,6 +974,7 @@ namespace KlingonWin10WPF
                             lstScene.Visibility = Visibility.Visible;
                             lstComputer.Visibility = Visibility.Visible;
                             CurEmulator.Visibility = Visibility.Visible;
+                            tbDebugTextBlock.Visibility = Visibility.Visible;
                             if (_clickRectangle != null) _clickRectangle.Visibility = Visibility.Visible;
                             // Unhook the scene changed event because we don't want it to restart the scene
                             lstScene.SelectionChanged -= lstSceneChanged;
@@ -985,6 +1014,9 @@ namespace KlingonWin10WPF
                     case Key.Subtract:
                         _mainScenePlayer.LowerVolume();
                         _supportingPlayer.LowerVolume();
+                        break;
+                    case Key.H:
+                        tbHelpText.Visibility = Visibility.Collapsed;
                         break;
                 }
             }
@@ -1111,7 +1143,8 @@ namespace KlingonWin10WPF
             ImgStartMain.Visibility = Visibility.Collapsed;
             Mouse.OverrideCursor = Cursors.None;
             //Windows.UI.Xaml.Window.Current.CoreWindow.PointerCursor = null;
-            
+            _mainScenePlayer.VisualizationHeightMultiplier = _OriginalMainVideoHeight / _HotspotOriginalMainVideoHeight;
+            _mainScenePlayer.VisualizationWidthMultiplier = _OriginalMainVideoWidth / _HotspotOriginalMainVideoWidth;
             _mainScenePlayer.innerGrid = VVGrid;
             _mainScenePlayer.ActionOn += () =>
             {
@@ -1144,6 +1177,7 @@ namespace KlingonWin10WPF
                 }
 
             };
+            ClickSurface.Focus();
         }
         private void ShowCursor()
         {

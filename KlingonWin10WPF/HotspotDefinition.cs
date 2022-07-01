@@ -129,7 +129,7 @@ namespace KlingonWin10WPF
             }
             return false;
         }
-        public void Draw(Grid parentElement, long Milliseconds, SceneDefinition scene)
+        public void Draw(Grid parentElement, long Milliseconds, SceneDefinition scene, double visualizationWidthMultiplier, double visualizationHeightMultiplier)
         {
             int left = 0;
             int top = 0;
@@ -156,10 +156,10 @@ namespace KlingonWin10WPF
                 case HotspotType.Interpolate:
                 case HotspotType.Multi:
                     if (Area.Count == 1)
-                        left = (int)(Area[0].TopLeft.X * _Scale);
-                    top = (int)(Area[0].TopLeft.Y * _Scale);
-                    right = (int)(Area[0].BottomRight.X * _Scale);
-                    bot = (int)(Area[0].BottomRight.Y * _Scale);
+                        left = (int)(Area[0].TopLeft.X * (_Scale * visualizationWidthMultiplier));
+                    top = (int)(Area[0].TopLeft.Y * (_Scale * visualizationHeightMultiplier));
+                    right = (int)(Area[0].BottomRight.X * (_Scale * visualizationWidthMultiplier));
+                    bot = (int)(Area[0].BottomRight.Y * (_Scale * visualizationHeightMultiplier));
 
 
 
@@ -183,10 +183,10 @@ namespace KlingonWin10WPF
                         interpolatebottomrightX = (long)((float)interpolatebottomrightX + ((Area[1].BottomRight.X - Area[0].BottomRight.X) * DistanceCompleted));
                         interpolatebottomrightY = (long)((float)interpolatebottomrightY + ((Area[1].BottomRight.Y - Area[0].BottomRight.Y) * DistanceCompleted));
 
-                        left = (int)(interpolatetopleftX * _Scale);
-                        top = (int)(interpolatetopleftY * _Scale);
-                        right = (int)(interpolatebottomrightX * _Scale);
-                        bot = (int)(interpolatebottomrightY * _Scale);
+                        left = (int)(interpolatetopleftX * (_Scale * visualizationWidthMultiplier));
+                        top = (int)(interpolatetopleftY * (_Scale * visualizationWidthMultiplier));
+                        right = (int)(interpolatebottomrightX * (_Scale * visualizationWidthMultiplier));
+                        bot = (int)(interpolatebottomrightY * (_Scale * visualizationWidthMultiplier));
 
                     }
                     break;

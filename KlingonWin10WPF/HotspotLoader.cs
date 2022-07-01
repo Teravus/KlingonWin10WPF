@@ -35,8 +35,8 @@ namespace KlingonWin10WPF
                         def.Name = linevals[linevalcounter++];
                         def.RelativeVideoName = linevals[linevalcounter++];
                         def.ActionVideo = linevals[linevalcounter++];
-                        def.FrameStart = Convert.ToInt32(linevals[linevalcounter++]) - 2;
-                        def.FrameEnd = Convert.ToInt32(linevals[linevalcounter++]) - 2;
+                        def.FrameStart = Convert.ToInt32(linevals[linevalcounter++]) - 3;
+                        def.FrameEnd = Convert.ToInt32(linevals[linevalcounter++]) - 1;
                         def.Area = new List<Box2d>() {
                             new Box2d() {
                                 TopLeft = new System.Drawing.Point() {
