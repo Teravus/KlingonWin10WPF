@@ -1001,6 +1001,12 @@ namespace KlingonWin10WPF
                     case Key.Space:
                             SwitchGameModeActiveInfo();
                         break;
+                    case Key.P:
+                    case Key.Pause:
+                    case Key.Play:
+                    case Key.MediaPlayPause:
+                            SwitchGameModeActiveInfo();
+                        break;
                     // OemPlus
                     // OemMinus
                     // Add
