@@ -861,6 +861,17 @@ namespace KlingonWin10WPF
                     }
                 }
             }
+            // Failsafe to trigger program quit action if we reach the end, but current scene is logo1
+            if (_currentScene.Name == "LOGO1" && !_displayElement.MediaPlayer.IsPlaying)
+            {
+                UserActionRequired quituserAction = QuitGame;
+                if (quituserAction != null)
+                {
+                    quituserAction();
+                }
+                return;
+            }
+
             switch (_currentScene.SceneType)
             {
                 case SceneType.Main:

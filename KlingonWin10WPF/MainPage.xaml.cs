@@ -149,8 +149,8 @@ namespace KlingonWin10WPF
                 var clickareaheight = ClickSurface.ActualHeight;
 
                 // ILOVEPIE ( https://github.com/ILOVEPIE )  suggested this alternative to my broken home-grown code.
-                var letterbox_width = Math.Max(0, clickareawidth - (_OriginalAspectRatio * clickareaheight)) / 2;
-                var letterbox_height = Math.Max(0, clickareaheight - (clickareawidth / _OriginalAspectRatio)) / 2;
+                var letterbox_width = Math.Max(0, clickareawidth - (_OriginalAspectRatio * clickareaheight)) * 0.5f;
+                var letterbox_height = Math.Max(0, clickareaheight - (clickareawidth / _OriginalAspectRatio)) * 0.5f;
 
                 var relclickX = (int)((_lastClickPoint.X - letterbox_width) / ((clickareawidth - (letterbox_width * 2)) / _HotspotOriginalMainVideoWidth));
                 var relclickY = (int)((_lastClickPoint.Y - letterbox_height) / ((clickareaheight - (letterbox_height * 2)) / _HotspotOriginalMainVideoHeight));
