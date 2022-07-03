@@ -538,7 +538,7 @@
 
                     </Grid>
                 </Canvas>
-                <Image x:Name="CurEmulator" gif:AnimationBehavior.SourceUri="{Binding SelectedImage}" gif:AnimationBehavior.RepeatBehavior="{Binding RepeatBehavior}" Source="/Assets/dktahg.gif" Width="41" Height="48" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed"  />
+                <Image x:Name="CurEmulator" gif:AnimationBehavior.SourceUri="{Binding SelectedImage}" gif:AnimationBehavior.RepeatBehavior="{Binding RepeatBehavior}" Source="/Assets/dktahg.gif" Width="82" Height="96" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed"  />
             </Grid>
 
         </vlc:VideoView>
