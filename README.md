@@ -90,8 +90,15 @@ TrueMotion(R) is a registered trademark of The Duck Corporation.
 Windows is a trademark and Microsoft is a registered trademark of Microsoft Corporation.
 
 ---
-
+https://www.startrek.com/fan-films
 The remake of the FMV engine is entirely new and includes none of the game assets or content.  Simon & Schuster never released code for the original edition. 
+
+---
+
+## Additional Legal Notice from https://www.startrek.com/fan-films
+While this isn't a fan film, CBS/Paramount would like fan made projects to have an explicit disclaimer regarding trademarks, logos and other proprties held by CBS/Paramount Pictures and other Star Trek Franchises.
+
+Star Trek and all related marks, logos and characters are solely owned by CBS Studios Inc. This fan project is not endorsed by, sponsored by, nor affiliated with CBS, Paramount Pictures, or any other Star Trek franchise, and is a non-commercial fan-made recreation of a software application from scratch intended for recreational use. No commercial exhibition or distribution is permitted. No alleged independent rights will be asserted against CBS or Paramount Pictures.
 
 ---
 
